@@ -34,6 +34,7 @@
 #include <avr/interrupt.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <util/delay.h>
 
 /*---------------------- Configurações do sistema ----------------------*/
 #ifndef F_CPU
@@ -59,6 +60,12 @@ static volatile uint32_t g_millis = 0;
 
 /* Próximo instante (ms) em que devemos amostrar/emitir CSV */
 static uint32_t g_next_sample_ms = 0;
+
+/* Offset dinâmico medido em 0 A (calibrado na inicialização) */
+static uint16_t g_adc_mid = ADC_MID;
+
+/* Corrige orientação de corrente (+1 normal, -1 se sinal invertido) */
+static int8_t g_polarity = +1;
 
 /*---------------------- UART (registradores) --------------------------*/
 static void uart_init_9600(void)
@@ -181,6 +188,17 @@ static uint16_t adc_read_blocking(void)
 	return (uint16_t)((high << 8) | low);
 }
 
+/* Faz média de N amostras para calibrar o offset (0 A) */
+static uint16_t adc_calibrate_mid(uint16_t nsamples)
+{
+	uint32_t acc = 0;
+	for (uint16_t i = 0; i < nsamples; i++) {
+		acc += adc_read_blocking();
+		/* correção: chamar a função */
+	}
+	return (uint16_t)(acc / nsamples);
+}
+
 /*---------------------- Conversão ADC -> corrente (mA) ---------------*/
 /*
 * I_mA = ((adc - ADC_MID) * VREF_MV * 1000) / (ADC_FULL_SCALE * ACS712_SENS_MV_PER_A)
@@ -188,8 +206,9 @@ static uint16_t adc_read_blocking(void)
 */
 static int32_t adc_to_current_mA(uint16_t adc)
 {
-	int32_t delta = (int32_t)adc - (int32_t)ADC_MID;          /* pode ser negativo */
-	int64_t num   = (int64_t)delta * (int64_t)VREF_MV * 1000; /* delta * 5000 * 1000 */
+	/* Usa offset calibrado (g_adc_mid). Se preferir, substitua por ADC_MID fixo. */
+	int32_t delta = (int32_t)adc - (int32_t)g_adc_mid;         /* pode ser negativo */
+	int64_t num   = (int64_t)delta * (int64_t)VREF_MV * 1000;  /* delta * 5000 * 1000 */
 	int64_t den   = (int64_t)ADC_FULL_SCALE * (int64_t)ACS712_SENS_MV_PER_A; /* 1023 * 185 */
 
 	/* Arredondamento (half-up) respeitando o sinal */
@@ -200,6 +219,7 @@ static int32_t adc_to_current_mA(uint16_t adc)
 	}
 
 	int64_t res = num / den; /* resultado em mA (pode ser negativo) */
+	res *= g_polarity;       /* corrige orientação, se necessário (+1/-1) */
 	if (res > INT32_MAX) res = INT32_MAX;
 	if (res < INT32_MIN) res = INT32_MIN;
 	return (int32_t)res;
@@ -213,12 +233,16 @@ int main(void)
 	adc_init_single_ended_adc0();
 	sei();
 
+	/* Aguarda estabilizar a saída do sensor e calibra offset em 0 A */
+	_delay_ms(50);
+	g_adc_mid = adc_calibrate_mid(200);
+
 	g_next_sample_ms = millis() + SAMPLE_PERIOD_MS;
 
 	for (;;) {
 		uint32_t now = millis();
 		if ((int32_t)(now - g_next_sample_ms) >= 0) {
-			uint16_t adc_raw   = adc_read_blocking();
+			uint16_t adc_raw    = adc_read_blocking();
 			int32_t  current_mA = adc_to_current_mA(adc_raw);
 
 			/* CSV: <timestamp_ms>,<current_mA>\r\n */
