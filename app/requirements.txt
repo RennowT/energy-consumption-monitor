@@ -1,0 +1,5 @@
+pyserial>=3.5
+matplotlib>=3.8
+pandas>=2.2
+numpy>=2.0
+PyQt5>=5.15
