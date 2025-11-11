@@ -34,3 +34,13 @@ class PlotWidget(QWidget):
         self.ax.set_ylabel("Current (mA)")
         self.ax.grid(True)
         self.canvas.draw()
+
+    def reset_plot(self):
+        self.times.clear()
+        self.currents.clear()
+        self.ax.clear()
+        self.ax.set_title("Current vs Time")
+        self.ax.set_xlabel("Time (ms)")
+        self.ax.set_ylabel("Current (mA)")
+        self.ax.grid(True)
+        self.canvas.draw()

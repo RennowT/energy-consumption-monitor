@@ -58,6 +58,8 @@ class MainWindow(QMainWindow):
         if self.running:
             return
         try:
+            self.plot.reset_plot()
+            
             self.controller = AppController(port=self.port, baudrate=self.baudrate)
             self.controller.start()
             self.running = True
