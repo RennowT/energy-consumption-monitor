@@ -1,32 +1,32 @@
 # Energy Consumption Monitor
 
-Real-time energy consumption monitoring system using an **Arduino Nano** and an **ACS712 5A current sensor**.
-The project reads current values from the sensor, sends them via serial communication, and displays them in a **Python desktop application** that plots real-time graphs, optionally saves the data to CSV files, and allows saving the generated graph as an image file.
+Real-time energy consumption monitoring system using an **Arduino Nano** and an **ACS712 5A current sensor**.  
+The project reads current values from the sensor, sends them via serial communication, and displays them in a **Python desktop application** built with **PyQt5** that plots real-time graphs, saves the data to CSV files, and allows exporting the plotted graph as an image.
 
 ---
 
 ## Overview
 
-This system allows you to measure and visualize the electrical current of a device over time, estimate energy consumption, and log data for further analysis.
+This system allows measuring and visualizing the electrical current of a device over time, estimating energy consumption, and logging data for further analysis.  
 It’s divided into two main parts:
 
 ### 1. Hardware
 
-* **Arduino Nano**
-* **ACS712 5A Current Sensor**
-* The Arduino reads the analog signal from the ACS712, converts it to current in milliamperes (mA), and sends timestamped readings via serial communication in **CSV format**.
+- **Arduino Nano**
+- **ACS712 5A Current Sensor**
+- The Arduino reads the analog signal from the ACS712, converts it to current in milliamperes (mA), and sends timestamped readings via serial communication in **CSV format**.
 
 ### 2. Software
 
-* **Python Desktop Application (UI)**
-* Reads serial data, plots current vs. time in real-time, and can save data to CSV or export the final plot as an image file.
-* The user can:
-
-  * Select which device is being measured.
-  * Choose whether to save data to CSV.
-  * Change the default output directory.
-  * Start and stop data collection.
-  * Save the plotted graph manually.
+- **Python Desktop Application (UI)**
+- Built with **PyQt5** and **Matplotlib**.
+- Reads serial data, plots current vs. time in real-time, and can save data to CSV or export the final plot as an image file.
+- Main functions:
+  - Configure serial port and baud rate.
+  - Start and stop data collection.
+  - Display real-time current graph.
+  - Show average, RMS, and estimated energy (Wh).
+  - Automatically save or export data.
 
 ---
 
@@ -49,8 +49,6 @@ It’s divided into two main parts:
 I = (VOUT - 2.5) / 0.185
 ```
 
-*(for the 5 A version, VOUT is centered at 2.5 V when current = 0 A)*
-
 ---
 
 ## Firmware
@@ -62,13 +60,13 @@ It performs the following tasks:
 * Uses **Timer0 in CTC mode** to maintain a 1 ms timestamp counter.
 * Reads **analog data from A0 (ADC0)** connected to the ACS712.
 * Converts the raw ADC value into **current in milliamperes (mA)**.
-* Sends the result in **CSV format**:
+* Sends results in **CSV format**:
 
 ```
 <timestamp_ms>,<current_mA>
 ```
 
-Example output:
+Example:
 
 ```
 1245,-56
@@ -77,22 +75,18 @@ Example output:
 1293,102
 ```
 
-### Sampling rate
-
-* Default: ~62.5 samples per second (`SAMPLE_PERIOD_MS = 16`).
-* Can be increased or reduced by changing this constant in the firmware.
-* Higher rates require a higher UART baud rate.
-
 ---
 
 ## Python Application
 
-* **Real-time plotting** using Matplotlib and threading.
-* **Serial communication** with configurable COM port and baud rate.
-* **CSV logging** with corrected timestamps (relative to first sample).
-* **Graph reset and stop button** for clean data sessions.
-* **Option to save the generated graph as an image file.**
-* **Simple and responsive UI** built with Tkinter.
+* Developed using **PyQt5** and **Matplotlib**.
+* Modules:
+
+  * `drivers/` → handles serial communication and sensor calibration.
+  * `core/` → manages logging, data analysis, and coordination.
+  * `ui/` → main interface with real-time plotting and user controls.
+* CSV data is logged automatically with timestamps and current values.
+* Graphs can be exported as images.
 
 ---
 
@@ -101,15 +95,15 @@ Example output:
 ### Firmware
 
 * Developed using **PlatformIO** (AVR environment).
-* Compatible with **Arduino Nano** @ 16 MHz.
+* Compatible with **Arduino Nano @ 16 MHz**.
 
 ### Python Application
 
-* Python 3.11 or higher
-* Required packages:
+* **Python 3.9+**
+* Dependencies:
 
 ```bash
-pip install pyserial matplotlib tkinter pandas
+pip install pyserial matplotlib pandas PyQt5
 ```
 
 ---
@@ -119,38 +113,33 @@ pip install pyserial matplotlib tkinter pandas
 ### Arduino Firmware
 
 1. Connect the **ACS712 OUT pin** to **A0** on the Arduino Nano.
-2. Upload the firmware using **PlatformIO** (the code is in `firmware/energy-monitor-nano/src/main.c`).
-3. Open the serial monitor at **9600 baud** to verify the readings.
-   Each line corresponds to a timestamp and current in milliamperes.
+2. Upload the firmware using **PlatformIO** (located in `firmware/src/main.c`).
+3. Open the serial monitor at **9600 baud** to verify readings.
 
 ### Python UI
 
-1. Connect the Arduino via USB
-2. Run the Python application:
+1. Connect the Arduino Nano to your PC via USB.
+
+2. Run the application:
 
    ```bash
-   python app.py
+   cd app
+   python -m src.main
    ```
 
-3. Select the correct COM port and press **Start** to begin data collection.
-4. Press **Stop** to end data capture.
-5. Optionally, click **Save Graph** to export the plotted chart as an image.
+3. In the window:
 
----
-
-## Future Improvements
-
-* Add RMS and power calculations (P = V × I).
-* Implement automatic offset calibration.
-* Add energy and cost estimation.
-* Optional binary protocol for higher sampling rates.
+   * Click **Settings** to select the correct COM port and baud rate.
+   * Click **Start** to begin data collection.
+   * Click **Stop** to end the capture and view statistics.
+   * Optionally, export the graph or open the saved CSV.
 
 ---
 
 ## License
 
 This project is released under the **Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)** license.
-You are free to use, modify, and share the project for **non-commercial purposes only**, with attribution to the author.
+You are free to use, modify, and share it for **non-commercial purposes**, with attribution to the author.
 The full license text is available in [`LICENSE`](LICENSE).
 
 ---
